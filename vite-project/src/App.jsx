@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import Search from "./components/Search";
 import Spinner from "./components/Spinner";
+import MovieCard from "./components/MovieCard";
+import { useDebounce } from "react-use";
 
 // API - Application Programming Interface - a set of rules that allows one software application to talk to another
 const API_BASE_URL = "https://api.themoviedb.org/3";
@@ -23,11 +25,19 @@ const App = () => {
   // fetching data through API will take few sec, we have to show the loading
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchMovies = async () => {
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  // Debounce the search term to prevent making too many API requests
+  // by waiting for the user to stop typing for 500ms
+  useDebounce(()=> setDebouncedSearchTerm(searchTerm), 500, [searchTerm])
+
+  const fetchMovies = async (query = '') => {
     setIsLoading(true);
     setErrorMessage("");
     try {
-      const endpoint = `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
+      const endpoint = query 
+      ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}`
+        : `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
 
       const response = await fetch(endpoint, API_OPTIONS);
 
@@ -57,8 +67,8 @@ const App = () => {
   }
 
   useEffect(() => {
-    fetchMovies();
-  }, [])
+    fetchMovies(debouncedSearchTerm);
+  }, [debouncedSearchTerm]);
 
   return (
     <main>
@@ -81,7 +91,7 @@ const App = () => {
           {/* {errorMessage && <p className="text-red-500">{errorMessage}</p>} */}
           {isLoading ? (<Spinner />) : errorMessage ? (<p className="text-red-500">{errorMessage}</p>): (<ul>
             {movieList.map((movie)=>(
-              <p key={movie.id} className="text-white">{movie.title}</p>
+              <MovieCard key = {movie.id} movie={movie}/>
           ))}
           </ul>)}
         </section>
